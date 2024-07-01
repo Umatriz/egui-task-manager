@@ -1,0 +1,19 @@
+[package]
+name = "egui-task-manager"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+resolver = "2"
+members = [
+    "examples/*",
+]
+
+[dependencies]
+crossbeam = { version = "0.8.4", features = ["crossbeam-channel"] }
+egui = {version = "0.27.2", optional = true}
+tokio = { version = "1", features = ["rt"], default-features = false }
+
+[features]
+default = ["egui"]
+egui = ["dep:egui"]

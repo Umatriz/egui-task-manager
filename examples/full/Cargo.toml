@@ -1,0 +1,9 @@
+[package]
+name = "full"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+eframe = "0.27.2"
+egui-task-manager = {path = "../../"}
+tokio = { version = "1", features = ["time"]}
