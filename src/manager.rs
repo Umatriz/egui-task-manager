@@ -24,15 +24,11 @@ use super::{
 ///     // ...
 /// }
 /// ```
-pub struct TaskManager<P> {
-    collections: HashMap<TypeId, CollectionData<P>>,
-    progress_handle: fn(&mut u32, P),
+pub struct TaskManager {
+    collections: HashMap<TypeId, CollectionData>,
 }
 
-impl<P> TaskManager<P>
-where
-    P: 'static,
-{
+impl TaskManager {
     #[cfg(feature = "egui")]
     /// Draws a simple ui.
     pub fn ui(&self, ui: &mut egui::Ui) {
@@ -42,16 +38,15 @@ where
     }
 
     /// Creates a new instance of the manager using provided progress handle.
-    pub fn new(handle: fn(&mut u32, P)) -> Self {
+    pub fn new() -> Self {
         Self {
             collections: HashMap::new(),
-            progress_handle: handle,
         }
     }
 
-    fn get_collection_mut<'c, C>(&mut self) -> &mut CollectionData<P>
+    fn get_collection_mut<'c, C>(&mut self) -> &mut CollectionData
     where
-        C: TasksCollection<'c, P> + 'static,
+        C: TasksCollection<'c> + 'static,
     {
         self.collections
             .get_mut(&TypeId::of::<C>())
@@ -68,8 +63,8 @@ where
     /// It must be called in the beginning of the update function.
     pub fn add_collection<'c, C>(&mut self, context: C::Context) -> &mut Self
     where
-        C: TasksCollection<'c, P> + 'static,
-        C::Executor: TaskExecutor<P> + 'static,
+        C: TasksCollection<'c> + 'static,
+        C::Executor: TaskExecutor + 'static,
     {
         self.push_collection::<C>().handle_collection::<C>(context)
     }
@@ -79,8 +74,8 @@ where
     /// It is recommended to use [`add_collection`](Self::add_collection).
     pub fn push_collection<'c, C>(&mut self) -> &mut Self
     where
-        C: TasksCollection<'c, P> + 'static,
-        C::Executor: TaskExecutor<P> + 'static,
+        C: TasksCollection<'c> + 'static,
+        C::Executor: TaskExecutor + 'static,
     {
         let id = TypeId::of::<C>();
 
@@ -98,20 +93,18 @@ where
     /// It is recommended to use [`add_collection`](Self::add_collection).
     pub fn handle_collection<'c, C>(&mut self, context: C::Context) -> &mut Self
     where
-        C: TasksCollection<'c, P> + 'static,
+        C: TasksCollection<'c> + 'static,
     {
         let handle = C::handle(context).into_any();
-        let progress_handle = self.progress_handle;
-        self.get_collection_mut::<C>()
-            .handle_all(handle, progress_handle);
 
+        self.get_collection_mut::<C>().handle_all(handle);
         self
     }
 
     /// Pushes a task to the executor of the specified collection.
-    pub fn push_task<'c, C>(&mut self, task: Task<C::Target, P>)
+    pub fn push_task<'c, C>(&mut self, task: Task<C::Target>)
     where
-        C: TasksCollection<'c, P> + 'static,
+        C: TasksCollection<'c> + 'static,
         C::Target: Send + 'static,
     {
         self.get_collection_mut::<C>().push_task::<C>(task);

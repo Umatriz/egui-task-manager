@@ -4,20 +4,39 @@ use crossbeam::channel::{Receiver, Sender};
 
 use crate::channel::Channel;
 
-/// Execution progress of a task.
-pub struct TaskProgress<P> {
-    current: u32,
-    total: Arc<OnceLock<u32>>,
-    channel: Channel<P>,
+/// It is used to handle to execution progress.
+///
+/// # Usage
+///
+/// ```rust
+/// # use egui_task_manager::Progress;
+/// struct UnitProgress;
+///
+/// impl Progress for UnitProgress {
+///     fn apply(&self, current: &mut u32) {
+///         *current += 1;
+///     }
+/// }
+/// ```
+pub trait Progress {
+    /// Apply the progress.
+    fn apply(&self, current: &mut u32);
 }
 
-impl<P> Default for TaskProgress<P> {
+/// Execution progress of a task.
+pub struct TaskProgress {
+    current: u32,
+    total: Arc<OnceLock<u32>>,
+    channel: Channel<Box<dyn Progress>>,
+}
+
+impl Default for TaskProgress {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<P> TaskProgress<P> {
+impl TaskProgress {
     /// Returns an empty task progress.
     pub fn new() -> Self {
         Self {
@@ -57,17 +76,17 @@ impl<P> TaskProgress<P> {
     }
 
     /// Progress channels' sender.
-    pub fn sender(&self) -> Sender<P> {
+    pub fn sender(&self) -> Sender<Box<dyn Progress>> {
         self.channel.sender()
     }
 
     /// Progress channels' receiver.
-    pub fn receiver(&self) -> Receiver<P> {
+    pub fn receiver(&self) -> Receiver<Box<dyn Progress>> {
         self.channel.receiver()
     }
 
     /// Gives a shared access to the [`TaskProgress`].
-    pub fn share(&self) -> TaskProgressShared<P> {
+    pub fn share(&self) -> TaskProgressShared {
         TaskProgressShared {
             total: self.total.clone(),
             sender: self.sender(),
@@ -89,23 +108,23 @@ impl<P> TaskProgress<P> {
 ///     let sender = progress.sender();
 ///
 ///     // now you can send your progress
-///     // in this case the type fot progress is `()`
+///     // in this case the type for progress is `()`
 ///     sender.send(());
 /// });
 /// ```
-pub struct TaskProgressShared<P> {
+pub struct TaskProgressShared {
     total: Arc<OnceLock<u32>>,
-    sender: Sender<P>,
+    sender: Sender<Box<dyn Progress>>,
 }
 
-impl<P> TaskProgressShared<P> {
+impl TaskProgressShared {
     /// Sets the total value.
     pub fn set_total(&self, total: u32) -> Result<(), u32> {
         self.total.set(total)
     }
 
-    /// Returns the progress sender.
-    pub fn sender(&self) -> Sender<P> {
-        self.sender.clone()
+    /// Progresses in the task. It actually sends the `progress` using a channel.
+    pub fn update<P: Progress + 'static>(&self, progress: P) {
+        self.sender.send(Box::new(progress));
     }
 }

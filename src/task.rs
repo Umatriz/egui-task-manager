@@ -12,18 +12,18 @@ use crate::{
 };
 
 /// Task that has `Box<dyn Any + Send>` as a return type.
-pub type AnyTask<P> = Task<Box<dyn Any + Send>, P>;
+pub type AnyTask = Task<Box<dyn Any + Send>>;
 
 /// A task.
-pub struct Task<R, P> {
+pub struct Task<R> {
     name: String,
     is_finished: Arc<OnceLock<Finished>>,
-    inner: Caller<R, P>,
+    inner: Caller<R>,
 }
 
-impl<R: 'static + Send, P> Task<R, P> {
+impl<R: 'static + Send> Task<R> {
     /// Creates a new task using provided name and [`Caller`](crate::Caller).
-    pub fn new(name: impl Into<String>, caller: Caller<R, P>) -> Self {
+    pub fn new(name: impl Into<String>, caller: Caller<R>) -> Self {
         Self {
             name: name.into(),
             is_finished: Arc::new(OnceLock::new()),
@@ -32,7 +32,7 @@ impl<R: 'static + Send, P> Task<R, P> {
     }
 
     /// Executes the task using provided `Sender` to send the result.
-    pub(crate) fn execute(self, channel: Sender<R>) -> TaskData<P> {
+    pub(crate) fn execute(self, channel: Sender<R>) -> TaskData {
         let (fut, progress) = match self.inner {
             Caller::Standard(fut) => (fut, None),
             Caller::Progressing(fun) => {
@@ -60,14 +60,13 @@ impl<R: 'static + Send, P> Task<R, P> {
     }
 }
 
-impl<T, P> HigherKinded for Task<T, P> {
-    type T<A> = Task<A, P>;
+impl<T> HigherKinded for Task<T> {
+    type T<A> = Task<A>;
 }
 
-impl<T, P> IntoAny for Task<T, P>
+impl<T> IntoAny for Task<T>
 where
     T: Send + 'static,
-    P: 'static,
 {
     fn into_any(self) -> Self::T<Box<dyn Any + Send>> {
         Task {
@@ -79,14 +78,14 @@ where
 }
 
 /// The data of a task that is currently running.
-pub struct TaskData<P> {
+pub struct TaskData {
     name: String,
     handle: TaskHandle,
     is_finished: Arc<OnceLock<Finished>>,
-    progress: Option<TaskProgress<P>>,
+    progress: Option<TaskProgress>,
 }
 
-impl<P> TaskData<P> {
+impl TaskData {
     #[cfg(feature = "egui")]
     /// Draws a simple ui.
     pub fn ui(&self, ui: &mut egui::Ui) {
@@ -135,12 +134,12 @@ impl<P> TaskData<P> {
     }
 
     /// Returns a reference to the [`TaskProgress`](crate::TaskProgress) of the current task if exists.
-    pub fn progress(&self) -> Option<&TaskProgress<P>> {
+    pub fn progress(&self) -> Option<&TaskProgress> {
         self.progress.as_ref()
     }
 
     /// Returns a mutable reference to the [`TaskProgress`](crate::TaskProgress) of the current task if exists.
-    pub fn progress_mut(&mut self) -> Option<&mut TaskProgress<P>> {
+    pub fn progress_mut(&mut self) -> Option<&mut TaskProgress> {
         self.progress.as_mut()
     }
 }

@@ -16,16 +16,16 @@ type PinnedFuture<T> = Pin<Box<dyn Future<Output = T> + Send + 'static>>;
 /// Marker to determine if task is finished
 pub(super) struct Finished;
 
-const _: Option<Box<dyn TaskExecutor<()>>> = None;
+const _: Option<Box<dyn TaskExecutor>> = None;
 
-pub trait TaskExecutor<P> {
-    fn push(&mut self, task: AnyTask<P>);
-    fn poll(&mut self, tasks: &[TaskData<P>]) -> ExecutionPoll<P>;
+pub trait TaskExecutor {
+    fn push(&mut self, task: AnyTask);
+    fn poll(&mut self, tasks: &[TaskData]) -> ExecutionPoll;
 }
 
-pub enum ExecutionPoll<P> {
+pub enum ExecutionPoll {
     /// There's a task ready to be executed. [`TasksExecutor::execute`] must be called.
-    Ready(AnyTask<P>),
+    Ready(AnyTask),
     /// There's no tasks or you're waiting for others to finish.
     Pending,
 }

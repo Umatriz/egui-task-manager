@@ -4,12 +4,12 @@ use crate::any::{HigherKinded, IntoAny};
 
 use super::{progress::TaskProgressShared, PinnedFuture};
 
-pub enum Caller<T, P> {
+pub enum Caller<T> {
     Standard(PinnedFuture<T>),
-    Progressing(Box<dyn FnOnce(TaskProgressShared<P>) -> PinnedFuture<T>>),
+    Progressing(Box<dyn FnOnce(TaskProgressShared) -> PinnedFuture<T>>),
 }
 
-impl<T, P> Caller<T, P> {
+impl<T> Caller<T> {
     pub fn standard<Fut>(fut: Fut) -> Self
     where
         Fut: Future<Output = T> + Send + 'static,
@@ -19,21 +19,20 @@ impl<T, P> Caller<T, P> {
 
     pub fn progressing<F, Fut>(fun: F) -> Self
     where
-        F: FnOnce(TaskProgressShared<P>) -> Fut + 'static,
+        F: FnOnce(TaskProgressShared) -> Fut + 'static,
         Fut: Future<Output = T> + Send + 'static,
     {
         Self::Progressing(Box::new(|progress| Box::pin((fun)(progress))))
     }
 }
 
-impl<T, P> HigherKinded for Caller<T, P> {
-    type T<A> = Caller<A, P>;
+impl<T> HigherKinded for Caller<T> {
+    type T<A> = Caller<A>;
 }
 
-impl<U, P> IntoAny for Caller<U, P>
+impl<U> IntoAny for Caller<U>
 where
     U: Send + 'static,
-    P: 'static,
 {
     fn into_any(self) -> Self::T<Box<dyn Any + Send>> {
         match self {

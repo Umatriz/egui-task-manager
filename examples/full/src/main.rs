@@ -15,12 +15,12 @@ fn main() -> Result<(), eframe::Error> {
 
 struct SimpleCollection;
 
-impl<'c, P> TasksCollection<'c, P> for SimpleCollection {
+impl<'c> TasksCollection<'c> for SimpleCollection {
     type Context = &'c mut u32;
 
     type Target = u32;
 
-    type Executor = executors::Parallel<P>;
+    type Executor = executors::Parallel;
 
     fn name() -> &'static str {
         "Simple collection"
@@ -35,13 +35,13 @@ struct MyApp {
     num: u32,
     task_num: u32,
     task_name: String,
-    manager: TaskManager<()>,
+    manager: TaskManager,
 }
 
 impl Default for MyApp {
     fn default() -> Self {
         Self {
-            manager: TaskManager::new(|_, ()| ()),
+            manager: TaskManager::new(),
             num: 0,
             task_num: 1,
             task_name: "New task".to_owned(),

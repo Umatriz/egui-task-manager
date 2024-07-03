@@ -30,7 +30,7 @@ use crate::{
 ///     }
 /// }
 /// ```
-pub trait TasksCollection<'c, P> {
+pub trait TasksCollection<'c> {
     /// Context that you can pass into the result handle.
     ///
     /// # Usage
@@ -45,7 +45,7 @@ pub trait TasksCollection<'c, P> {
     type Target: Send + 'static;
 
     /// Executor that is used to control the execution process for this collection.
-    type Executor: TaskExecutor<P> + Default;
+    type Executor: TaskExecutor + Default;
 
     /// Collections' name that will be displayed.
     fn name() -> &'static str;
@@ -55,17 +55,14 @@ pub trait TasksCollection<'c, P> {
     fn handle(context: Self::Context) -> Handle<'c, Self::Target>;
 }
 
-pub struct CollectionData<P> {
+pub struct CollectionData {
     name: &'static str,
     channel: Channel<Box<dyn Any + Send>>,
-    tasks: Vec<TaskData<P>>,
-    executor: Box<dyn TaskExecutor<P>>,
+    tasks: Vec<TaskData>,
+    executor: Box<dyn TaskExecutor>,
 }
 
-impl<P> CollectionData<P>
-where
-    P: 'static,
-{
+impl CollectionData {
     #[cfg(feature = "egui")]
     pub fn ui(&self, ui: &mut egui::Ui) {
         ui.collapsing(self.name, |ui| {
@@ -81,7 +78,7 @@ where
 
     pub(super) fn from_collection<'c, C>() -> Self
     where
-        C: TasksCollection<'c, P>,
+        C: TasksCollection<'c>,
         C::Executor: 'static,
     {
         Self {
@@ -92,27 +89,27 @@ where
         }
     }
 
-    fn execute(&mut self, task: AnyTask<P>) {
+    fn execute(&mut self, task: AnyTask) {
         let sender = self.channel.sender();
         let task_data = task.execute(sender);
         self.push_task_data(task_data);
     }
 
-    fn push_task_data(&mut self, task_data: TaskData<P>) {
+    fn push_task_data(&mut self, task_data: TaskData) {
         self.tasks.push(task_data)
     }
 
-    pub fn push_task<'c, C>(&mut self, task: Task<C::Target, P>)
+    pub fn push_task<'c, C>(&mut self, task: Task<C::Target>)
     where
-        C: TasksCollection<'c, P>,
+        C: TasksCollection<'c>,
         C::Target: Send,
     {
         self.executor.push(task.into_any());
     }
 
-    pub fn handle_all(&mut self, result_handle: AnyHandle<'_>, progress_handle: fn(&mut u32, P)) {
+    pub fn handle_all(&mut self, result_handle: AnyHandle<'_>) {
         self.handle_execution();
-        self.handle_progress(progress_handle);
+        self.handle_progress();
         self.handle_results(result_handle);
         self.handle_deletion();
     }
@@ -127,10 +124,10 @@ where
         self.tasks.retain(|task| !task.is_finished())
     }
 
-    pub fn handle_progress(&mut self, progress_handle: fn(&mut u32, P)) {
+    pub fn handle_progress(&mut self) {
         for progress in self.tasks.iter_mut().filter_map(|task| task.progress_mut()) {
-            if let Ok(result) = progress.receiver().try_recv() {
-                progress_handle(progress.current_mut(), result)
+            if let Ok(data) = progress.receiver().try_recv() {
+                data.apply(progress.current_mut())
             }
         }
     }
