@@ -1,12 +1,16 @@
 use std::time::Duration;
 
-use eframe::egui::{self};
-use egui_task_manager::{
-    executors, Caller, Handle, Task, TaskExecutor, TaskManager, TasksCollection,
-};
+use eframe::{egui, NativeOptions};
+use egui_task_manager::{executors, Caller, Handle, Task, TaskManager, TasksCollection};
 
-fn main() {
-    println!("Hello, world!");
+fn main() -> Result<(), eframe::Error> {
+    egui_task_manager::setup!();
+
+    eframe::run_native(
+        "Task manager example",
+        NativeOptions::default(),
+        Box::new(|_cc| Box::<MyApp>::default()),
+    )
 }
 
 struct SimpleCollection;
@@ -16,7 +20,7 @@ impl<'c, P> TasksCollection<'c, P> for SimpleCollection {
 
     type Target = u32;
 
-    type Executor = executors::Linear<P>;
+    type Executor = executors::Parallel<P>;
 
     fn name() -> &'static str {
         "Simple collection"
@@ -47,7 +51,8 @@ impl Default for MyApp {
 
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
-        self.manager.collection::<SimpleCollection>(&mut self.num);
+        self.manager
+            .add_collection::<SimpleCollection>(&mut self.num);
 
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.group(|ui| {
@@ -63,7 +68,7 @@ impl eframe::App for MyApp {
                     self.manager.push_task::<SimpleCollection>(Task::new(
                         self.task_name.clone(),
                         Caller::standard(async move {
-                            tokio::time::sleep(Duration::from_secs(2)).await;
+                            tokio::time::sleep(Duration::from_secs(1)).await;
                             num
                         }),
                     ))

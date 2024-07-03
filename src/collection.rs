@@ -7,12 +7,51 @@ use crate::{
     task::{AnyTask, Task, TaskData},
 };
 
+/// Describes the collection of tasks.
+///
+/// ```rust
+/// # use egui_task_manager::*;
+///
+/// struct SimpleCollection;
+///
+/// impl<'c, P> TasksCollection<'c, P> for SimpleCollection {
+///     type Context = ();
+///
+///     type Target = String;
+///
+///     type Executor = executors::Linear<P>;
+///
+///     fn name() -> &'static str {
+///         "Simple collection"
+///     }
+///
+///     fn handle(context: Self::Context) -> Handle<'c, Self::Target> {
+///         Handle::new(|result| println!("Received a value! {result}"))
+///     }
+/// }
+/// ```
 pub trait TasksCollection<'c, P> {
+    /// Context that you can pass into the result handle.
+    ///
+    /// # Usage
+    ///
+    /// ```rust
+    /// // This type will be available in the handle.
+    /// type Context = &'c mut Vec<String>;
+    /// ```
     type Context: 'c;
+
+    /// The vale that tasks in this collection must return.
     type Target: Send + 'static;
+
+    /// Executor that is used to control the execution process for this collection.
     type Executor: TaskExecutor<P> + Default;
 
+    /// Collections' name that will be displayed.
     fn name() -> &'static str;
+
+    /// Handle that handles tasks' results. It can capture the context provided
+    /// by the [`Context`](TasksCollection::Context).
     fn handle(context: Self::Context) -> Handle<'c, Self::Target>;
 }
 

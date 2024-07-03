@@ -11,8 +11,10 @@ use crate::{
     spawning::TaskHandle,
 };
 
+/// Task that has `Box<dyn Any + Send>` as a return type.
 pub type AnyTask<P> = Task<Box<dyn Any + Send>, P>;
 
+/// A task.
 pub struct Task<R, P> {
     name: String,
     is_finished: Arc<OnceLock<Finished>>,
@@ -20,6 +22,7 @@ pub struct Task<R, P> {
 }
 
 impl<R: 'static + Send, P> Task<R, P> {
+    /// Creates a new task using provided name and [`Caller`](crate::Caller).
     pub fn new(name: impl Into<String>, caller: Caller<R, P>) -> Self {
         Self {
             name: name.into(),
@@ -28,6 +31,7 @@ impl<R: 'static + Send, P> Task<R, P> {
         }
     }
 
+    /// Executes the task using provided `Sender` to send the result.
     pub(crate) fn execute(self, channel: Sender<R>) -> TaskData<P> {
         let (fut, progress) = match self.inner {
             Caller::Standard(fut) => (fut, None),
@@ -74,6 +78,7 @@ where
     }
 }
 
+/// The data of a task that is currently running.
 pub struct TaskData<P> {
     name: String,
     handle: TaskHandle,
@@ -83,6 +88,7 @@ pub struct TaskData<P> {
 
 impl<P> TaskData<P> {
     #[cfg(feature = "egui")]
+    /// Draws a simple ui.
     pub fn ui(&self, ui: &mut egui::Ui) {
         ui.label(self.name.as_str());
         match self.progress.as_ref() {
@@ -111,22 +117,29 @@ impl<P> TaskData<P> {
         });
     }
 
+    /// Tasks' name
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    /// Tasks' handle.
+    ///
+    /// Can be used to abort the task execution.
     pub fn handle(&self) -> &TaskHandle {
         &self.handle
     }
 
+    /// Checks if the task finished or not.
     pub fn is_finished(&self) -> bool {
         self.is_finished.get().is_some()
     }
 
+    /// Returns a reference to the [`TaskProgress`](crate::TaskProgress) of the current task if exists.
     pub fn progress(&self) -> Option<&TaskProgress<P>> {
         self.progress.as_ref()
     }
 
+    /// Returns a mutable reference to the [`TaskProgress`](crate::TaskProgress) of the current task if exists.
     pub fn progress_mut(&mut self) -> Option<&mut TaskProgress<P>> {
         self.progress.as_mut()
     }
