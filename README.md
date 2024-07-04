@@ -1,7 +1,7 @@
 # egui_task_manager
 
-A flexible way to manager asynchronous tasks.
+A flexible way to manage asynchronous tasks.
 
 ## Examples
 
-See [`examples/conuter`](./examples/counter/).
+See [`examples/counter`](./examples/counter/).
