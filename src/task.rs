@@ -1,9 +1,7 @@
 use std::{
     any::Any,
-    sync::{Arc, OnceLock},
+    sync::{mpsc::Sender, Arc, OnceLock},
 };
-
-use crossbeam::channel::Sender;
 
 use crate::{
     any::{HigherKinded, IntoAny},
@@ -104,24 +102,30 @@ impl TaskData {
             ui.memory_mut(|mem| mem.toggle_popup(popup_id));
         }
 
-        egui::popup::popup_below_widget(ui, popup_id, &button, |ui| {
-            ui.label("Are you sure you want to cancel the task?");
-            ui.horizontal(|ui| {
-                if ui.button("Yes").clicked() {
-                    self.handle.abort();
-                    let _ = self.is_finished.set(Finished);
-                };
-                if ui.button("No").clicked() {};
-            });
-        });
+        egui::popup::popup_below_widget(
+            ui,
+            popup_id,
+            &button,
+            egui::PopupCloseBehavior::CloseOnClick,
+            |ui| {
+                ui.label("Are you sure you want to cancel the task?");
+                ui.horizontal(|ui| {
+                    if ui.button("Yes").clicked() {
+                        self.handle.abort();
+                        let _ = self.is_finished.set(Finished);
+                    };
+                    if ui.button("No").clicked() {};
+                });
+            },
+        );
     }
 
-    /// Tasks' name
+    /// Task's name
     pub fn name(&self) -> &str {
         &self.name
     }
 
-    /// Tasks' handle.
+    /// Task's handler.
     ///
     /// Can be used to abort the task execution.
     pub fn handle(&self) -> &TaskHandle {

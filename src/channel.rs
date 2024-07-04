@@ -1,4 +1,4 @@
-use crossbeam::channel::{Receiver, Sender};
+use std::sync::mpsc::{channel, Receiver, Sender};
 
 pub struct Channel<T> {
     sender: Sender<T>,
@@ -7,7 +7,7 @@ pub struct Channel<T> {
 
 impl<T> Channel<T> {
     pub fn new() -> Self {
-        let (sender, receiver) = crossbeam::channel::unbounded();
+        let (sender, receiver) = channel();
         Self { sender, receiver }
     }
 
@@ -15,7 +15,7 @@ impl<T> Channel<T> {
         self.sender.clone()
     }
 
-    pub fn receiver(&self) -> Receiver<T> {
-        self.receiver.clone()
+    pub fn receiver(&self) -> &Receiver<T> {
+        &self.receiver
     }
 }

@@ -1,7 +1,11 @@
+//! An example of how you can use this crate to increment a counter.
+//!
+//! Obviously in a real project you don't want to use this crate just for a counter.
+
 use std::time::Duration;
 
 use eframe::{egui, NativeOptions};
-use egui_task_manager::{executors, Caller, Handle, Task, TaskManager, TasksCollection};
+use egui_task_manager::{executors, Caller, Handler, Task, TaskManager, TasksCollection};
 
 fn main() -> Result<(), eframe::Error> {
     egui_task_manager::setup!();
@@ -9,7 +13,7 @@ fn main() -> Result<(), eframe::Error> {
     eframe::run_native(
         "Task manager example",
         NativeOptions::default(),
-        Box::new(|_cc| Box::<MyApp>::default()),
+        Box::new(|_cc| Ok(Box::<MyApp>::default())),
     )
 }
 
@@ -26,8 +30,8 @@ impl<'c> TasksCollection<'c> for SimpleCollection {
         "Simple collection"
     }
 
-    fn handle(context: Self::Context) -> egui_task_manager::Handle<'c, Self::Target> {
-        Handle::new(|value| *context += value)
+    fn handle(context: Self::Context) -> egui_task_manager::Handler<'c, Self::Target> {
+        Handler::new(|value| *context += value)
     }
 }
 

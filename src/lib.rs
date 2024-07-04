@@ -19,7 +19,7 @@ pub use task::*;
 ///
 /// Most of the time you just need to call the macro and it will do everything for you.
 /// ```rust
-/// egui_task_manager::setup!()
+/// egui_task_manager::setup!();
 /// ```
 pub mod setup {
     use std::time::Duration;
@@ -29,8 +29,7 @@ pub mod setup {
     /// Creates a new runtime.
     ///
     /// ```rust
-    /// use egui_task_manager::setup::runtime;
-    ///
+    /// # use egui_task_manager::setup::runtime;
     /// // Keep the guard
     /// let _enter = runtime().enter();
     /// ```
@@ -45,13 +44,11 @@ pub mod setup {
     /// Executes the runtime in its own thread
     ///
     /// ```rust
-    /// use egui_task_manager::setup::*;
-    ///
+    /// # use egui_task_manager::setup::*;
     /// let rt = runtime();
     /// let _enter = rt.enter();
     ///
-    /// spawn_sleeping_thread(rt);
-    ///
+    /// spawn_runtime_thread(rt);
     /// ```
     pub fn spawn_runtime_thread(rt: Runtime) {
         std::thread::spawn(move || {

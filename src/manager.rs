@@ -10,20 +10,17 @@ use super::{
     task::Task,
 };
 
-/// It holds all collections and a handle that is used to handle the progress of the execution.
-///
-/// The generic `P` determines the type that is used to track the execution progress of all tasks.
-///
+/// It holds all collections.
 ///
 /// ```rust
 /// # use egui_task_manager::TaskManager;
 /// struct MyState {
-///     // Since we passed () as a parameter now all your tasks that has progress tracking
-///     // must use ().
-///     manager: TaskManager<()>,
+///     // Keep it in your app's state.
+///     manager: TaskManager,
 ///     // ...
 /// }
 /// ```
+#[derive(Default)]
 pub struct TaskManager {
     collections: HashMap<TypeId, CollectionData>,
 }
@@ -39,9 +36,7 @@ impl TaskManager {
 
     /// Creates a new instance of the manager using provided progress handle.
     pub fn new() -> Self {
-        Self {
-            collections: HashMap::new(),
-        }
+        Self::default()
     }
 
     fn get_collection_mut<'c, C>(&mut self) -> &mut CollectionData
@@ -69,10 +64,12 @@ impl TaskManager {
         self.push_collection::<C>().handle_collection::<C>(context)
     }
 
-    /// Adds a new collection.
+    /// Adds a new collection. It **does not** handle the results, progression, execution and deletion.
+    /// If you use this method you **must** call [`handle_collection`](Self::handle_collection) to
+    /// see the anything.
     ///
     /// It is recommended to use [`add_collection`](Self::add_collection).
-    pub fn push_collection<'c, C>(&mut self) -> &mut Self
+    fn push_collection<'c, C>(&mut self) -> &mut Self
     where
         C: TasksCollection<'c> + 'static,
         C::Executor: TaskExecutor + 'static,
@@ -88,10 +85,11 @@ impl TaskManager {
         self
     }
 
-    /// Handles the tasks of the specified collection.
+    /// Handles the tasks of the specified collection. It **does not** add a new collection
+    /// to the manager. If you want to use this method you **must** call [`push_collection`](Self::push_collection).
     ///
     /// It is recommended to use [`add_collection`](Self::add_collection).
-    pub fn handle_collection<'c, C>(&mut self, context: C::Context) -> &mut Self
+    fn handle_collection<'c, C>(&mut self, context: C::Context) -> &mut Self
     where
         C: TasksCollection<'c> + 'static,
     {
@@ -107,6 +105,6 @@ impl TaskManager {
         C: TasksCollection<'c> + 'static,
         C::Target: Send + 'static,
     {
-        self.get_collection_mut::<C>().push_task::<C>(task);
+        self.get_collection_mut::<C>().push_task(task.into_any());
     }
 }

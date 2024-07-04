@@ -4,12 +4,21 @@ use crate::any::{HigherKinded, IntoAny};
 
 use super::{progress::TaskProgressShared, PinnedFuture};
 
+/// The task's body itself.
+///
+/// It has two states.
+/// - `Standard` has no progress.
+/// - `Progressing` has a progress and provides [`TaskProgressShared`][crate::TaskProgressShared].
 pub enum Caller<T> {
+    /// Standard caller. No progress just a future.
     Standard(PinnedFuture<T>),
+
+    /// Progressing caller. Has progress. Holds a closure that returns a future.
     Progressing(Box<dyn FnOnce(TaskProgressShared) -> PinnedFuture<T>>),
 }
 
 impl<T> Caller<T> {
+    /// Create a [`Standard`](Self::Standard) caller from a future.
     pub fn standard<Fut>(fut: Fut) -> Self
     where
         Fut: Future<Output = T> + Send + 'static,
@@ -17,6 +26,7 @@ impl<T> Caller<T> {
         Self::Standard(Box::pin(fut))
     }
 
+    /// Create a [`Standard`](Self::Progressing) caller from a closure that returns a future.
     pub fn progressing<F, Fut>(fun: F) -> Self
     where
         F: FnOnce(TaskProgressShared) -> Fut + 'static,

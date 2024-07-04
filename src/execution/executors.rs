@@ -1,3 +1,5 @@
+//! Executors that can be used in the [`TasksCollection`](crate::TasksCollection).
+
 use std::collections::VecDeque;
 
 use crate::task::{AnyTask, TaskData};

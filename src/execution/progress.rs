@@ -1,6 +1,7 @@
-use std::sync::{Arc, OnceLock};
-
-use crossbeam::channel::{Receiver, Sender};
+use std::sync::{
+    mpsc::{Receiver, SendError, Sender},
+    Arc, OnceLock,
+};
 
 use crate::channel::Channel;
 
@@ -75,13 +76,13 @@ impl TaskProgress {
         self.total.set(total)
     }
 
-    /// Progress channels' sender.
+    /// Progress channel's sender.
     pub fn sender(&self) -> Sender<Box<dyn Progress>> {
         self.channel.sender()
     }
 
-    /// Progress channels' receiver.
-    pub fn receiver(&self) -> Receiver<Box<dyn Progress>> {
+    /// Progress channel's receiver.
+    pub fn receiver(&self) -> &Receiver<Box<dyn Progress>> {
         self.channel.receiver()
     }
 
@@ -95,21 +96,27 @@ impl TaskProgress {
 }
 
 /// Shared version of [`TaskProgress`] which does not provide any mutable access
-/// to its' fields.
+/// to it's fields.
 ///
 /// It can be accessed via [`Caller::Progressing`](crate::Caller).
 /// ```rust
-/// # use egui_task_manager::Caller;
+/// # use egui_task_manager::*;
+///
+/// // We need to define a progress type and implement `Progress` for it.
+/// struct UnitProgress;
+///
+/// impl Progress for UnitProgress {
+///     fn apply(&self, current: &mut u32) {
+///         *current += 1;
+///     }
+/// }
+///
 /// Caller::progressing(|progress| async move {
-///     // set the total number of items or steps that needs to be completed
+///     // Set the total number of items or steps that needs to be completed
 ///     // eg. number of items in the downloading.
 ///     progress.set_total(5);
-///
-///     let sender = progress.sender();
-///
-///     // now you can send your progress
-///     // in this case the type for progress is `()`
-///     sender.send(());
+///     // Now we can use our type.
+///     let _ = progress.update(UnitProgress);
 /// });
 /// ```
 pub struct TaskProgressShared {
@@ -124,7 +131,10 @@ impl TaskProgressShared {
     }
 
     /// Progresses in the task. It actually sends the `progress` using a channel.
-    pub fn update<P: Progress + 'static>(&self, progress: P) {
-        self.sender.send(Box::new(progress));
+    pub fn update<P: Progress + 'static>(
+        &self,
+        progress: P,
+    ) -> Result<(), SendError<Box<dyn Progress>>> {
+        self.sender.send(Box::new(progress))
     }
 }

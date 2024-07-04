@@ -1,10 +1,9 @@
 use std::any::Any;
 
 use crate::{
-    any::IntoAny,
     channel::Channel,
-    execution::{AnyHandle, Handle, TaskExecutor},
-    task::{AnyTask, Task, TaskData},
+    execution::{AnyHandler, Handler, TaskExecutor},
+    task::{AnyTask, TaskData},
 };
 
 /// Describes the collection of tasks.
@@ -14,31 +13,24 @@ use crate::{
 ///
 /// struct SimpleCollection;
 ///
-/// impl<'c, P> TasksCollection<'c, P> for SimpleCollection {
+/// impl<'c> TasksCollection<'c> for SimpleCollection {
 ///     type Context = ();
 ///
 ///     type Target = String;
 ///
-///     type Executor = executors::Linear<P>;
+///     type Executor = executors::Linear;
 ///
 ///     fn name() -> &'static str {
 ///         "Simple collection"
 ///     }
 ///
-///     fn handle(context: Self::Context) -> Handle<'c, Self::Target> {
-///         Handle::new(|result| println!("Received a value! {result}"))
+///     fn handle(context: Self::Context) -> Handler<'c, Self::Target> {
+///         Handler::new(|result| println!("Received a value! {result}"))
 ///     }
 /// }
 /// ```
 pub trait TasksCollection<'c> {
     /// Context that you can pass into the result handle.
-    ///
-    /// # Usage
-    ///
-    /// ```rust
-    /// // This type will be available in the handle.
-    /// type Context = &'c mut Vec<String>;
-    /// ```
     type Context: 'c;
 
     /// The vale that tasks in this collection must return.
@@ -47,14 +39,18 @@ pub trait TasksCollection<'c> {
     /// Executor that is used to control the execution process for this collection.
     type Executor: TaskExecutor + Default;
 
-    /// Collections' name that will be displayed.
+    /// Collection's name that will be displayed.
     fn name() -> &'static str;
 
-    /// Handle that handles tasks' results. It can capture the context provided
+    /// Handle that handles task's results. It can capture the context provided
     /// by the [`Context`](TasksCollection::Context).
-    fn handle(context: Self::Context) -> Handle<'c, Self::Target>;
+    fn handle(context: Self::Context) -> Handler<'c, Self::Target>;
 }
 
+/// Collection holds the tasks in the queue and the data of currently executing ones.
+///
+/// It uses [`TaskExecutor`](crate::TaskExecutor) to determine when a new task should
+/// start it's execution.
 pub struct CollectionData {
     name: &'static str,
     channel: Channel<Box<dyn Any + Send>>,
@@ -64,6 +60,7 @@ pub struct CollectionData {
 
 impl CollectionData {
     #[cfg(feature = "egui")]
+    /// Draws a simple ui.
     pub fn ui(&self, ui: &mut egui::Ui) {
         ui.collapsing(self.name, |ui| {
             for task in &self.tasks {
@@ -72,6 +69,7 @@ impl CollectionData {
         });
     }
 
+    /// Collection name.
     pub fn name(&self) -> &str {
         self.name
     }
@@ -99,31 +97,35 @@ impl CollectionData {
         self.tasks.push(task_data)
     }
 
-    pub fn push_task<'c, C>(&mut self, task: Task<C::Target>)
-    where
-        C: TasksCollection<'c>,
-        C::Target: Send,
-    {
-        self.executor.push(task.into_any());
+    pub(crate) fn push_task(&mut self, task: AnyTask) {
+        self.executor.push(task);
     }
 
-    pub fn handle_all(&mut self, result_handle: AnyHandle<'_>) {
+    /// Сalls all handle-methods, in this order:
+    /// - [`handle_execution`](Self::handle_execution)
+    /// - [`handle_progress`](Self::handle_progress)
+    /// - [`handle_results`](Self::handle_results)
+    /// - [`handle_deletion`](Self::handle_deletion)
+    pub fn handle_all(&mut self, result_handle: AnyHandler<'_>) {
         self.handle_execution();
         self.handle_progress();
         self.handle_results(result_handle);
         self.handle_deletion();
     }
 
-    pub fn handle_results(&mut self, mut handle: AnyHandle<'_>) {
+    /// Handles tasks execution results using provided handle.
+    pub fn handle_results(&mut self, mut handle: AnyHandler<'_>) {
         if let Ok(value) = self.channel.receiver().try_recv() {
             handle.apply(value)
         }
     }
 
+    /// Handles tasks deletion.
     pub fn handle_deletion(&mut self) {
         self.tasks.retain(|task| !task.is_finished())
     }
 
+    /// Handles tasks progress.
     pub fn handle_progress(&mut self) {
         for progress in self.tasks.iter_mut().filter_map(|task| task.progress_mut()) {
             if let Ok(data) = progress.receiver().try_recv() {
@@ -132,6 +134,13 @@ impl CollectionData {
         }
     }
 
+    /// Handles tasks execution.
+    ///
+    /// More specifically it calls [`TasksExecutor::poll`](crate::TaskExecutor) method
+    /// which decides if the task is ready to be executed. This method will call `poll`
+    /// as long as it returns [`ExecutionPoll::Ready`](crate::ExecutionPoll) which means
+    /// that there's still tasks to execute. If [`ExecutionPoll::Pending`](crate::ExecutionPoll)
+    /// is returned it will stop the polling.
     pub fn handle_execution(&mut self) {
         use crate::execution::ExecutionPoll as E;
         while let E::Ready(task) = self.executor.poll(&self.tasks) {
