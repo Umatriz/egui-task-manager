@@ -5,5 +5,5 @@ edition = "2021"
 
 [dependencies]
 eframe = "0.28.0"
-egui-task-manager = {path = "../../"}
+egui_task_manager = {path = "../../"}
 tokio = { version = "1", features = ["time"]}

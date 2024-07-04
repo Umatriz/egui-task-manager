@@ -1,7 +1,11 @@
 [package]
-name = "egui-task-manager"
+name = "egui_task_manager"
 version = "0.1.0"
 edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Manage asynchronous easily"
+repository = "https://github.com/Umatriz/egui-task-manager"
+readme = "README.md"
 
 [workspace]
 resolver = "2"

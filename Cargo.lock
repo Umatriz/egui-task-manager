@@ -778,7 +778,7 @@ name = "counter"
 version = "0.1.0"
 dependencies = [
  "eframe",
- "egui-task-manager",
+ "egui_task_manager",
  "tokio",
 ]
 
@@ -933,14 +933,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "egui-task-manager"
-version = "0.1.0"
-dependencies = [
- "egui",
- "tokio",
-]
-
-[[package]]
 name = "egui-wgpu"
 version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -992,6 +984,14 @@ dependencies = [
  "wasm-bindgen",
  "web-sys",
  "winit",
+]
+
+[[package]]
+name = "egui_task_manager"
+version = "0.1.0"
+dependencies = [
+ "egui",
+ "tokio",
 ]
 
 [[package]]
