@@ -1,6 +1,40 @@
 #![warn(missing_docs)]
 
-//! The crate
+//! Provides a way to manager asynchronous tasks.
+//!
+//! See [`examples/counter`](https://github.com/Umatriz/egui-task-manager/blob/master/examples/counter/src/main.rs)
+//! for more information.
+//!
+//! ## [`TaskManager`]
+//!
+//! The [`TaskManager`] is a core type that you must save in your app's state. Call [`TaskManager::add_collection`]
+//! to register a new collection. And then call [`TaskManager::push_task`] when you want to add a new task.
+//!
+//! ## [`TasksCollection`] and [`CollectionData`]
+//!
+//! [`TasksCollection`] can be implemented for a type and then this type might be used as a type parameter
+//! for several methods.
+//!
+//! [`CollectionData`] is a "dynamic" version of a type that implements [`TasksCollection`] although
+//! not totally. It holds collection's name and executor. And in addition to this holds currently
+//! running tasks and channel that receives data that tasks yield.
+//!
+//! ## [`Task`] and [`Caller`]
+//!
+//! [`Task`] has name and [`Caller`]. [`Caller`] can be either [`Standard`](Caller::Standard) or
+//! [`Progressing`](Caller::Progressing).
+//!
+//! [`Caller::standard`] expects a future.
+//!
+//! [`Caller::progressing`] expects a closure with an argument of type [`TaskProgressShared`].
+//! This type provides functionality for progress tracking and functions such [`TaskProgressShared::set_total`]
+//! and [`TaskProgressShared::update`]. Which allows you to track your progress.
+//!
+//! For more information about progress see [`TaskProgressShared`].
+//!
+//! ## [`TaskExecutor`]
+//!
+//! A trait that determines task's execution.
 
 mod any;
 mod channel;

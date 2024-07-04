@@ -20,6 +20,10 @@ use super::{
 ///     // ...
 /// }
 /// ```
+///
+/// You need to call [`TaskManager::add_collection`] for all collection you want to have.
+/// If you will try to [`TaskManager::push_task`] to a collection that has not been added the
+/// method will panic
 #[derive(Default)]
 pub struct TaskManager {
     collections: HashMap<TypeId, CollectionData>,
@@ -100,6 +104,10 @@ impl TaskManager {
     }
 
     /// Pushes a task to the executor of the specified collection.
+    ///
+    /// # Panics
+    ///
+    /// Panics if collection `C` has not been added via [`TaskManager::add_collection`].
     pub fn push_task<'c, C>(&mut self, task: Task<C::Target>)
     where
         C: TasksCollection<'c> + 'static,

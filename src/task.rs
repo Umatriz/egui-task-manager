@@ -12,10 +12,9 @@ use crate::{
 /// Task that has `Box<dyn Any + Send>` as a return type.
 pub type AnyTask = Task<Box<dyn Any + Send>>;
 
-/// A task.
+/// A task that can be executed.
 pub struct Task<R> {
     name: String,
-    is_finished: Arc<OnceLock<Finished>>,
     inner: Caller<R>,
 }
 
@@ -24,7 +23,6 @@ impl<R: 'static + Send> Task<R> {
     pub fn new(name: impl Into<String>, caller: Caller<R>) -> Self {
         Self {
             name: name.into(),
-            is_finished: Arc::new(OnceLock::new()),
             inner: caller,
         }
     }
@@ -41,18 +39,20 @@ impl<R: 'static + Send> Task<R> {
             }
         };
 
-        let is_finished = self.is_finished.clone();
+        let is_finished = Arc::new(OnceLock::new());
+
+        let cloned_is_finished = is_finished.clone();
 
         let handle = TaskHandle::from(async move {
             let value = fut.await;
             let _ = channel.send(value);
-            let _ = is_finished.set(Finished);
+            let _ = cloned_is_finished.clone().set(Finished);
         });
 
         TaskData {
             name: self.name,
             handle,
-            is_finished: self.is_finished.clone(),
+            is_finished,
             progress,
         }
     }
@@ -69,7 +69,6 @@ where
     fn into_any(self) -> Self::T<Box<dyn Any + Send>> {
         Task {
             name: self.name,
-            is_finished: self.is_finished,
             inner: self.inner.into_any(),
         }
     }

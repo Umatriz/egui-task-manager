@@ -18,7 +18,7 @@ pub(super) struct Finished;
 
 const _: Option<Box<dyn TaskExecutor>> = None;
 
-/// A trait for executors that manage new tasks.
+/// A trait that determines task's execution.
 ///
 /// For examples see implementation of the [`Linear`](executors::Linear) and [`Parallel`](executors::Parallel)
 /// executors.
