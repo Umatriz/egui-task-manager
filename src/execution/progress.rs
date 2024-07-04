@@ -19,7 +19,7 @@ use crate::channel::Channel;
 ///     }
 /// }
 /// ```
-pub trait Progress {
+pub trait Progress: Send {
     /// Apply the progress.
     fn apply(&self, current: &mut u32);
 }
