@@ -5,7 +5,7 @@
 use std::time::Duration;
 
 use eframe::{egui, NativeOptions};
-use egui_task_manager::{executors, Caller, Handler, Task, TaskManager, TasksCollection};
+use egui_task_manager::{executors, Caller, Handler, Progress, Task, TaskManager, TasksCollection};
 
 fn main() -> Result<(), eframe::Error> {
     egui_task_manager::setup!();
@@ -35,11 +35,41 @@ impl<'c> TasksCollection<'c> for SimpleCollection {
     }
 }
 
+struct LabelCollection;
+
+impl<'c> TasksCollection<'c> for LabelCollection {
+    type Context = &'c mut String;
+
+    type Target = String;
+
+    type Executor = executors::Linear;
+
+    fn name() -> &'static str {
+        "Update label collection"
+    }
+
+    fn handle(context: Self::Context) -> Handler<'c, Self::Target> {
+        Handler::new(|value| *context = value)
+    }
+}
+
+struct UnitProgress;
+
+impl Progress for UnitProgress {
+    fn apply(&self, current: &mut u32) {
+        *current += 1;
+    }
+}
+
 struct MyApp {
+    manager: TaskManager,
+
     num: u32,
     task_num: u32,
     task_name: String,
-    manager: TaskManager,
+
+    current_label: String,
+    label_to_set: String,
 }
 
 impl Default for MyApp {
@@ -49,6 +79,8 @@ impl Default for MyApp {
             num: 0,
             task_num: 1,
             task_name: "New task".to_owned(),
+            current_label: "default label".to_owned(),
+            label_to_set: "new label".to_owned(),
         }
     }
 }
@@ -56,11 +88,13 @@ impl Default for MyApp {
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
         self.manager
-            .add_collection::<SimpleCollection>(&mut self.num);
+            .add_collection::<SimpleCollection>(&mut self.num)
+            .add_collection::<LabelCollection>(&mut self.current_label);
 
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.group(|ui| {
                 ui.label(format!("The total sum is {}", self.num));
+                ui.label(format!("Current label is: {}", self.current_label));
             });
 
             ui.group(|ui| {
@@ -77,6 +111,23 @@ impl eframe::App for MyApp {
                         }),
                     ))
                 };
+            });
+
+            ui.group(|ui| {
+                ui.label("Task's name and new label:");
+                ui.text_edit_singleline(&mut self.label_to_set);
+                if ui.button("Add a new label!").clicked(){
+                    let label = self.label_to_set.clone();
+                    let caller = Caller::progressing(|progress| async move {
+                        let _ = progress.set_total(10);
+                        for _ in 0..10 {
+                            let _ = progress.update(UnitProgress);
+                            tokio::time::sleep(Duration::from_secs_f32(0.5)).await;
+                        }
+                        label
+                    });
+                    self.manager.push_task::<LabelCollection>(Task::new(&self.label_to_set, caller));
+                }
             });
 
             self.manager.ui(ui);
