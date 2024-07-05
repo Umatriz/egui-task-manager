@@ -29,6 +29,10 @@ impl TaskExecutor for Linear {
             .pop_front()
             .map_or(ExecutionPoll::Pending, ExecutionPoll::Ready)
     }
+
+    fn iter_tasks(&self) -> Box<dyn Iterator<Item = &AnyTask> + '_> {
+        Box::new(self.inner.iter())
+    }
 }
 
 /// Provides parallel tasks execution.
@@ -49,5 +53,9 @@ impl TaskExecutor for Parallel {
         self.inner
             .pop_front()
             .map_or(ExecutionPoll::Pending, ExecutionPoll::Ready)
+    }
+
+    fn iter_tasks(&self) -> Box<dyn Iterator<Item = &AnyTask> + '_> {
+        Box::new(self.inner.iter())
     }
 }

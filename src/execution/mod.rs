@@ -32,6 +32,9 @@ pub trait TaskExecutor {
     ///
     /// See [`ExecutionPoll`] for more information. And [`executors`](executors) module for examples.
     fn poll(&mut self, tasks: &[TaskData]) -> ExecutionPoll;
+
+    /// Tasks that are currently waiting to be executed.
+    fn iter_tasks(&self) -> Box<dyn Iterator<Item = &AnyTask> + '_>;
 }
 
 /// Indicates whether a task available to be executed or not.
