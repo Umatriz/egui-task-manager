@@ -74,6 +74,16 @@ impl CollectionData {
         self.name
     }
 
+    /// Currently running tasks
+    pub fn iter_tasks(&self) -> impl Iterator<Item = &TaskData> {
+        self.tasks.iter()
+    }
+
+    /// Collection's executor
+    pub fn executor(&self) -> &dyn TaskExecutor {
+        &*self.executor
+    }
+
     pub(super) fn from_collection<'c, C>() -> Self
     where
         C: TasksCollection<'c>,

@@ -43,6 +43,27 @@ impl TaskManager {
         Self::default()
     }
 
+    /// Returns a reference to a [`CollectionData`] corresponding to the type
+    /// parameter `C`
+    pub fn get_collection<'c, C>(&self) -> &CollectionData
+    where
+        C: TasksCollection<'c> + 'static,
+    {
+        self.collections
+            .get(&TypeId::of::<C>())
+            .unwrap_or_else(move || {
+                panic!(
+                    "You must add `{}` collection to the `TaskManager` by calling `add_collection`",
+                    type_name::<C>()
+                )
+            })
+    }
+
+    /// An iterator visiting all collections.
+    pub fn iter_collections(&self) -> impl Iterator<Item = &CollectionData> {
+        self.collections.values()
+    }
+
     fn get_collection_mut<'c, C>(&mut self) -> &mut CollectionData
     where
         C: TasksCollection<'c> + 'static,
