@@ -74,12 +74,17 @@ impl CollectionData {
         self.name
     }
 
-    /// Currently running tasks
+    /// Returns a slice of the currently running tasks.
+    pub fn tasks(&self) -> &[TaskData] {
+        &self.tasks
+    }
+
+    /// Currently running tasks.
     pub fn iter_tasks(&self) -> impl Iterator<Item = &TaskData> {
         self.tasks.iter()
     }
 
-    /// Collection's executor
+    /// Collection's executor.
     pub fn executor(&self) -> &dyn TaskExecutor {
         &*self.executor
     }
