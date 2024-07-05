@@ -130,11 +130,23 @@ impl TaskProgressShared {
         self.total.set(total)
     }
 
-    /// Progresses in the task. It actually sends the `progress` using a channel.
+    /// Progresses in the task.
     pub fn update<P: Progress + 'static>(
         &self,
         progress: P,
     ) -> Result<(), SendError<Box<dyn Progress>>> {
         self.sender.send(Box::new(progress))
+    }
+
+    /// Get the total value.
+    pub fn total(&self) -> Option<u32> {
+        self.total.get().copied()
+    }
+
+    /// Clones the sender and returns it.
+    ///
+    /// It is recommended to use [`update`](Self::update).
+    pub fn sender(&self) -> Sender<Box<dyn Progress>> {
+        self.sender.clone()
     }
 }
