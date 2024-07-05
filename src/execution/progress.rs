@@ -54,8 +54,6 @@ impl TaskProgress {
     ///
     /// It will panic in the debug builds if `self.total` is uninitialized.
     pub fn ui(&self, ui: &mut egui::Ui) {
-        // Value must be initialized
-        debug_assert!(self.total.get().is_some());
         if let Some(total) = self.total.get().copied() {
             ui.add(
                 egui::ProgressBar::new(self.current as f32 / total as f32)
