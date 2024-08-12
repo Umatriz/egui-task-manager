@@ -95,7 +95,9 @@ impl TaskData {
         }
 
         let button = ui.button("Cancel");
-        let popup_id = egui::Id::new("confirm_task_cancellation_popup_id");
+        let popup_id = egui::Id::new("confirm_task_cancellation_popup_id")
+            .with(self.name())
+            .with(ui.id());
 
         if button.clicked() {
             ui.memory_mut(|mem| mem.toggle_popup(popup_id));
